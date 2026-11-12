@@ -1,0 +1,122 @@
+rules_version = '2';
+// Storage cerrado por defecto. Las cuentas pendientes de eliminación no pueden
+// leer rutas privadas ni crear, modificar o borrar archivos.
+// Guía: .ai/rules/security-rules.md | Registro: .ai/docs/security-rules-registry.md
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // === HELPERS ===
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userPath() {
+      return /databases/(default)/documents/users/$(request.auth.uid);
+    }
+
+    function membershipPath() {
+      return /databases/(default)/documents/salonMemberships/$(request.auth.uid);
+    }
+
+    function salonPath(salonId) {
+      return /databases/(default)/documents/salons/$(salonId);
+    }
+
+    function userDoc() {
+      return firestore.get(userPath()).data;
+    }
+
+    function membershipDoc() {
+      return firestore.get(membershipPath()).data;
+    }
+
+    function salonDoc(salonId) {
+      return firestore.get(salonPath(salonId)).data;
+    }
+
+    // Misma semántica que assertActiveAuth / firestore.rules.
+    function hasActiveAccount() {
+      return isSignedIn()
+        && firestore.exists(userPath())
+        && userDoc().get('isBanned', false) != true
+        && userDoc().get('isDeleted', false) != true
+        && userDoc().get('accountStatus', 'active') == 'active';
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.role == 'admin';
+    }
+
+    // Solo lectura pública; no usar para escritura del owner.
+    function salonVisible(salonId) {
+      return firestore.exists(salonPath(salonId))
+        && salonDoc(salonId).get('isDeleted', false) != true
+        && salonDoc(salonId).get('publishStatus', '') == 'published';
+    }
+
+    // Membresía owner activa (independiente de publishStatus).
+    function isActiveSalonOwner(salonId) {
+      return hasActiveAccount()
+        && firestore.exists(membershipPath())
+        && membershipDoc().get('salonId', '') == salonId
+        && membershipDoc().get('role', '') == 'owner'
+        && membershipDoc().get('status', '') == 'active';
+    }
+
+    // Respaldo: dueño en salons/{id}.ownerId (también independiente de publishStatus).
+    function ownsSalon(salonId) {
+      return hasActiveAccount()
+        && firestore.exists(salonPath(salonId))
+        && salonDoc(salonId).get('ownerId', '') == request.auth.uid
+        && salonDoc(salonId).get('isDeleted', false) != true;
+    }
+
+    function canManagePlaceImages(salonId) {
+      return isActiveSalonOwner(salonId) || ownsSalon(salonId);
+    }
+
+    function isImageUnder5Mb() {
+      return request.resource != null
+        && request.resource.contentType.matches('image/.*')
+        && request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // === ENFORCED ===
+    match /negocios/{salonId}/lugar/{fileName} {
+      // Owner primero (draft/hidden/published). Público solo si publicado.
+      allow read: if canManagePlaceImages(salonId)
+        || salonVisible(salonId)
+        || isAdmin();
+      allow create, update: if (canManagePlaceImages(salonId)
+        && isImageUnder5Mb()) || isAdmin();
+      allow delete: if canManagePlaceImages(salonId) || isAdmin();
+    }
+
+    match /users/{uid}/profile/{fileName} {
+      allow read: if true;
+      allow create, update: if (hasActiveAccount()
+        && request.auth.uid == uid
+        && isImageUnder5Mb()) || isAdmin();
+      allow delete: if (hasActiveAccount()
+        && request.auth.uid == uid) || isAdmin();
+    }
+
+    match /reports/{reportId}/evidence/{fileName} {
+      allow read: if isAdmin();
+      allow create: if hasActiveAccount()
+        && firestore.exists(
+             /databases/(default)/documents/reports/$(reportId)
+           )
+        && firestore.get(
+             /databases/(default)/documents/reports/$(reportId)
+           ).data.get('reporterId', '') == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Cualquier ruta no documentada queda denegada salvo al admin global.
+    match /{allPaths=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "projects": {
+    "default": "TU_PROYECTO_DEV",
+    "dev": "TU_PROYECTO_DEV",
+    "prod": "TU_PROYECTO_PROD"
+  },
+  "targets": {},
+  "etags": {}
+}

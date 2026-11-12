@@ -1,0 +1,5 @@
+# Ruta relativa a android/ (también puede ser absoluta).
+storeFile=keystore/jolom-prod-upload.jks
+storePassword=CAMBIAR_PASSWORD_DEL_KEYSTORE
+keyAlias=jolom-prod-upload
+keyPassword=CAMBIAR_PASSWORD_DE_LA_LLAVE

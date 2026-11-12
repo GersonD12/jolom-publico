@@ -1,0 +1,246 @@
+rules_version = '2';
+// El admin de la app (custom claim `role == 'admin'`) tiene acceso total.
+// Guía: .ai/rules/security-rules.md | Registro: .ai/docs/security-rules-registry.md
+// Paths de negocio: estado `drafted` (lecturas acotadas; mutaciones sensibles vía Functions).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // === HELPERS ===
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function hasActiveAccount() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && (!get(/databases/$(database)/documents/users/$(request.auth.uid)).data.keys()
+              .hasAny(['accountStatus'])
+            || get(/databases/$(database)/documents/users/$(request.auth.uid))
+                .data.accountStatus == 'active')
+        && get(/databases/$(database)/documents/users/$(request.auth.uid))
+            .data.isBanned != true
+        && get(/databases/$(database)/documents/users/$(request.auth.uid))
+            .data.isDeleted != true
+        && (!get(/databases/$(database)/documents/users/$(request.auth.uid))
+              .data.keys().hasAny(['moderationStatus'])
+            || get(/databases/$(database)/documents/users/$(request.auth.uid))
+                .data.moderationStatus != 'banned');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.role == 'admin';
+    }
+
+    function isOwner(uid) {
+      return hasActiveAccount() && request.auth.uid == uid;
+    }
+
+    function salonPublished(salonId) {
+      return exists(/databases/$(database)/documents/salons/$(salonId))
+        && get(/databases/$(database)/documents/salons/$(salonId)).data.publishStatus == 'published'
+        && get(/databases/$(database)/documents/salons/$(salonId)).data.isDeleted != true;
+    }
+
+    function membershipOf(uid) {
+      return get(/databases/$(database)/documents/salonMemberships/$(uid)).data;
+    }
+
+    function isActiveMemberOfSalon(salonId) {
+      return hasActiveAccount()
+        && exists(/databases/$(database)/documents/salonMemberships/$(request.auth.uid))
+        && membershipOf(request.auth.uid).salonId == salonId
+        && membershipOf(request.auth.uid).status == 'active';
+    }
+
+    function isSalonOwner(salonId) {
+      return isActiveMemberOfSalon(salonId)
+        && membershipOf(request.auth.uid).role == 'owner';
+    }
+
+    // === ADMIN GLOBAL (OR con matches específicos) ===
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // === appConfig (flags globales) ===
+    match /appConfig/{docId} {
+      // La versión debe validarse antes del login. El documento settings solo
+      // contiene configuración pública de producto.
+      allow read: if docId == 'settings';
+      allow write: if isAdmin();
+    }
+
+    // === users ===
+    match /users/{uid} {
+      // La lectura propia permanece disponible para mostrar deletionPending.
+      allow read: if isSelf(uid) || isAdmin();
+      // El cliente no puede auto-asignarse ban/capabilities; creación vía onUserCreated.
+      allow create: if false;
+      allow update: if isOwner(uid)
+        && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny([
+              'isBanned',
+              'isDeleted',
+              'moderationStatus',
+              'moderationReason',
+              'capabilities',
+              'accountStatus',
+              'deletionRequestedAt',
+              'deletionStartedAt',
+              'deletionCompletedAt',
+              'deletionJobId',
+              'purgeAfter',
+              'createdAt'
+            ]);
+      allow delete: if false;
+    }
+
+    // === barberProfiles ===
+    match /barberProfiles/{uid} {
+      allow read: if resource.data.status == 'active' || isOwner(uid) || isAdmin();
+      allow write: if false; // Functions
+    }
+
+    // === salons ===
+    match /salons/{salonId} {
+      allow read: if resource.data.publishStatus == 'published'
+        && resource.data.isDeleted != true
+        || (hasActiveAccount() && resource.data.ownerId == request.auth.uid)
+        || isActiveMemberOfSalon(salonId)
+        || isAdmin();
+      allow write: if false; // createSalon y futuros callables
+    }
+
+    // === salonMemberships ===
+    match /salonMemberships/{uid} {
+      allow read: if isOwner(uid)
+        || (isSignedIn()
+            && resource.data.keys().hasAll(['salonId'])
+            && isSalonOwner(resource.data.salonId))
+        // Lista pública de peluqueros activos de un negocio publicado (reserva).
+        || (resource.data.keys().hasAll(['salonId', 'status'])
+            && resource.data.status == 'active'
+            && salonPublished(resource.data.salonId))
+        || isAdmin();
+      allow write: if false;
+    }
+
+    // === salonInvitations ===
+    match /salonInvitations/{invitationId} {
+      allow read: if hasActiveAccount()
+        && (resource.data.inviteeId == request.auth.uid
+            || resource.data.inviterId == request.auth.uid)
+        || isAdmin();
+      allow write: if false;
+    }
+
+    // === services ===
+    match /services/{serviceId} {
+      allow read: if (resource.data.status == 'active'
+            && resource.data.isDeleted != true
+            && salonPublished(resource.data.salonId))
+        || (isSignedIn() && isActiveMemberOfSalon(resource.data.salonId))
+        || isAdmin();
+      allow write: if false; // propietario vía Functions (futuro)
+    }
+
+    // === availability ===
+    match /availability/{barberId} {
+      allow read: if isOwner(barberId)
+        || (isSignedIn()
+            && resource.data.keys().hasAll(['salonId'])
+            && isSalonOwner(resource.data.salonId))
+        // Horario semanal público en ficha de salón publicado (sin exceptions).
+        || (resource.data.keys().hasAll(['salonId'])
+            && salonPublished(resource.data.salonId))
+        || isAdmin();
+      allow write: if false;
+
+      match /exceptions/{exceptionId} {
+        allow read: if isOwner(barberId)
+          || (isSignedIn()
+              && get(/databases/$(database)/documents/availability/$(barberId))
+                  .data.keys().hasAll(['salonId'])
+              && isSalonOwner(
+                  get(/databases/$(database)/documents/availability/$(barberId))
+                      .data.salonId))
+          || isAdmin();
+        allow write: if false;
+      }
+    }
+
+    // === appointments ===
+    match /appointments/{appointmentId} {
+      allow read: if hasActiveAccount()
+        && (resource.data.clientId == request.auth.uid
+            || resource.data.barberId == request.auth.uid
+            || isSalonOwner(resource.data.salonId))
+        || isAdmin();
+      allow write: if false;
+    }
+
+    // === notifications ===
+    match /notifications/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if false;
+
+      match /items/{notificationId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow update: if isOwner(uid)
+          && request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['readAt']);
+        allow create, delete: if false;
+      }
+    }
+
+    // === reports ===
+    match /reports/{reportId} {
+      allow read: if hasActiveAccount()
+        && resource.data.reporterId == request.auth.uid
+        || isAdmin();
+      allow write: if false;
+    }
+
+    // Estado local salón-cliente; se gestiona únicamente vía Functions.
+    match /salonClientBlocks/{relationId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // === moderation / audit / stats / idempotency ===
+    match /moderationCases/{caseId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /accountDeletionJobs/{jobId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // Autorización por path del doc ID (incluye docs inexistentes).
+    match /stats/{scopeId} {
+      allow read: if isAdmin()
+        || (hasActiveAccount()
+            && scopeId == 'barber_' + request.auth.uid)
+        || (hasActiveAccount()
+            && exists(/databases/$(database)/documents/salonMemberships/$(request.auth.uid))
+            && scopeId == 'salon_' + membershipOf(request.auth.uid).salonId
+            && membershipOf(request.auth.uid).role == 'owner'
+            && membershipOf(request.auth.uid).status == 'active');
+      allow write: if false;
+    }
+
+    match /idempotencyKeys/{key} {
+      allow read, write: if false;
+    }
+  }
+}

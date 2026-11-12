@@ -1,0 +1,36 @@
+{
+  "name": "jolom-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "set-admin": "node scripts/set-admin-claim.mjs",
+    "set-admin:dev": "ADMIN_TARGET_ENV=dev node scripts/set-admin-claim.mjs",
+    "set-admin:prod": "ADMIN_TARGET_ENV=prod node scripts/set-admin-claim.mjs"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "firebase": "^12.16.0",
+    "lucide-react": "^1.25.0",
+    "next": "16.2.11",
+    "next-themes": "^0.4.6",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.11",
+    "firebase-admin": "^14.2.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

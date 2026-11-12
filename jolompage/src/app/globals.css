@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+/* Tokens de marca Jolom (alineados con AppColors de Flutter) */
+:root {
+  --brand: #0095b6;
+  --primary: #006a7c;
+  --on-primary: #ffffff;
+  --primary-container: #a9edfa;
+  --secondary: #8b5000;
+  --secondary-container: #ffddb3;
+  --tertiary: #3e6b50;
+  --tertiary-container: #bfeccf;
+  --background: #f7fafb;
+  --surface: #f7fafb;
+  --card: #ffffff;
+  --surface-secondary: #e3f0f2;
+  --foreground: #161d1f;
+  --muted: #465256;
+  --outline: #6f797c;
+  --error: #ba1a1a;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --brand: #56d6ec;
+    --primary: #56d6ec;
+    --on-primary: #00363f;
+    --primary-container: #00505f;
+    --secondary: #ffb95f;
+    --secondary-container: #673b00;
+    --tertiary: #a4d3b4;
+    --tertiary-container: #285139;
+    --background: #0f1416;
+    --surface: #0f1416;
+    --card: #171c1e;
+    --surface-secondary: #253033;
+    --foreground: #e1e7e9;
+    --muted: #c0c8cb;
+    --outline: #899295;
+    --error: #ffb4ab;
+  }
+}
+
+@theme inline {
+  --color-brand: var(--brand);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-primary-container: var(--primary-container);
+  --color-secondary: var(--secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-container: var(--tertiary-container);
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-surface-secondary: var(--surface-secondary);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-outline: var(--outline);
+  --color-error: var(--error);
+  --font-sans: var(--font-sans-family);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float {
+    animation: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

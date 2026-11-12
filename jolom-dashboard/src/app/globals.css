@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+/*
+  Jolom brand tokens
+  Format: light | dark (where pairs were provided)
+*/
+
+:root {
+  /* Brand — Azul Bondi */
+  --bondi: #0095b6;
+  --bondi-on-soft: #0095b6;
+  --bondi-soft: #a9edfa;
+
+  /* Primary button */
+  --primary: #006a7c;
+  --primary-foreground: #ffffff;
+  --primary-hover: #00505f;
+
+  /* Accent — Ámbar (warnings / highlights) */
+  --amber: #8b5000;
+  --amber-soft: #ffddb3;
+  --amber-foreground: #8b5000;
+
+  /* Success — Celadón */
+  --celadon: #3e6b50;
+  --celadon-soft: #bfeccf;
+  --celadon-foreground: #3e6b50;
+
+  /* Surfaces */
+  --background: #f7fafb;
+  --card: #ffffff;
+  --secondary: #e3f0f2;
+  --muted: #e3f0f2;
+
+  /* Text / borders — derived from surface neutrals (replace if brand table arrives) */
+  --foreground: #0f1416;
+  --muted-foreground: #253033;
+  --border: #e3f0f2;
+  --ring: #0095b6;
+  --input: #e3f0f2;
+
+  /* Error — complementary to Bondi (replace if brand table arrives) */
+  --destructive: #ba1a1a;
+  --destructive-foreground: #ffffff;
+  --destructive-soft: #ffdad6;
+
+  /* Sidebar / shell defaults */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0f1416;
+  --sidebar-border: #e3f0f2;
+  --sidebar-accent: #a9edfa;
+  --sidebar-accent-foreground: #006a7c;
+}
+
+.dark {
+  --bondi: #56d6ec;
+  --bondi-on-soft: #56d6ec;
+  --bondi-soft: #00505f;
+
+  --primary: #56d6ec;
+  --primary-foreground: #00363f;
+  --primary-hover: #a9edfa;
+
+  --amber: #ffb95f;
+  --amber-soft: #673b00;
+  --amber-foreground: #ffb95f;
+
+  --celadon: #a4d3b4;
+  --celadon-soft: #285139;
+  --celadon-foreground: #a4d3b4;
+
+  --background: #0f1416;
+  --card: #171c1e;
+  --secondary: #253033;
+  --muted: #253033;
+
+  --foreground: #f7fafb;
+  --muted-foreground: #e3f0f2;
+  --border: #253033;
+  --ring: #56d6ec;
+  --input: #253033;
+
+  --destructive: #ffb4ab;
+  --destructive-foreground: #690005;
+  --destructive-soft: #93000a;
+
+  --sidebar: #171c1e;
+  --sidebar-foreground: #f7fafb;
+  --sidebar-border: #253033;
+  --sidebar-accent: #00505f;
+  --sidebar-accent-foreground: #56d6ec;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-secondary: var(--secondary);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-bondi: var(--bondi);
+  --color-bondi-soft: var(--bondi-soft);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-amber-foreground: var(--amber-foreground);
+
+  --color-celadon: var(--celadon);
+  --color-celadon-soft: var(--celadon-soft);
+  --color-celadon-foreground: var(--celadon-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive-soft: var(--destructive-soft);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
+  }
+}

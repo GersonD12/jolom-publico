@@ -1,0 +1,28 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity android:name=".MainActivity">
+            <!-- App Link verificado del QR público de cada peluquería. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="https"
+                    android:host="${JOLOM_SITE_HOST}"
+                    android:pathPrefix="/s/" />
+            </intent-filter>
+            <!-- Vínculos de acceso sin contraseña enviados por Firebase Auth. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="https"
+                    android:host="${FIREBASE_AUTH_HOST}"
+                    android:pathPrefix="/__/auth/links" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
